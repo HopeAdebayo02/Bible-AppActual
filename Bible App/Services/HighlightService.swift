@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import SwiftUI
 
 final class HighlightService: ObservableObject {
     static let shared = HighlightService()
@@ -50,6 +51,17 @@ final class HighlightService: ObservableObject {
     func highlightsForChapter(bookId: Int, chapter: Int) -> [VerseHighlight] {
         return highlights.filter { $0.bookId == bookId && $0.chapter == chapter }
     }
+    
+    // Alias for compatibility with TapToHighlightHelper
+    func getHighlights(bookId: Int, chapter: Int) -> [VerseHighlight] {
+        return highlightsForChapter(bookId: bookId, chapter: chapter)
+    }
+    
+    // Add highlight method compatible with TapToHighlightHelper (accepts Color)
+    func addHighlight(bookId: Int, chapter: Int, startVerse: Int, endVerse: Int, color: Color) {
+        let colorHex = color.toHexString()
+        setHighlight(bookId: bookId, chapter: chapter, startVerse: startVerse, endVerse: endVerse, colorHex: colorHex)
+    }
 
     // Check if a verse is highlighted
     func isVerseHighlighted(bookId: Int, chapter: Int, verse: Int) -> Bool {
@@ -84,5 +96,28 @@ final class HighlightService: ObservableObject {
             d.set(data, forKey: highlightsKey)
         }
         objectWillChange.send()
+    }
+
+    // MARK: - Reset
+    func reset() {
+        highlights = []
+        loadHighlights()
+    }
+}
+
+// MARK: - Color Extension
+extension Color {
+    func toHexString() -> String {
+        // Convert SwiftUI Color to UIColor, then to hex string
+        let uiColor = UIColor(self)
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        
+        uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        
+        let rgb = Int(red * 255) << 16 | Int(green * 255) << 8 | Int(blue * 255)
+        return String(format: "#%06x", rgb)
     }
 }

@@ -227,36 +227,44 @@ private struct IconFillOnPressStyle: ButtonStyle {
 private struct VerseOfTheDayCard: View {
     @State private var votd: VerseOfTheDay? = nil
     @State private var isLoading: Bool = true
+    @EnvironmentObject private var bibleRouter: BibleRouter
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Verse of the Day")
-                .font(.caption)
-                .foregroundColor(.secondary)
-
-            if let votd {
-                Text(votd.text)
-                    .font(.system(size: 20, weight: .regular, design: .serif))
-                    .foregroundColor(.primary)
-                    .lineSpacing(6)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text("– \(votd.reference)")
-                    .font(.subheadline)
+        Button(action: {
+            guard let votd = votd else { return }
+            navigateToVerse(reference: votd.reference)
+        }) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Verse of the Day")
+                    .font(.caption)
                     .foregroundColor(.secondary)
-            } else if isLoading {
-                ProgressView().tint(.secondary)
-            } else {
-                Text("Unable to load verse.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+
+                if let votd {
+                    Text(votd.text)
+                        .font(.system(size: 20, weight: .regular, design: .serif))
+                        .foregroundColor(.primary)
+                        .lineSpacing(6)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("– \(votd.reference)")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                } else if isLoading {
+                    ProgressView().tint(.secondary)
+                } else {
+                    Text("Unable to load verse.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+        .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(votd != nil ? "Verse of the Day: \(votd!.text) — \(votd!.reference)" : "Verse of the Day loading")
         .task {
@@ -281,6 +289,49 @@ private struct VerseOfTheDayCard: View {
                     isLoading = false
                 }
             } label: { Label("Refresh Verse", systemImage: "gobackward") }
+        }
+    }
+    
+    private func navigateToVerse(reference: String) {
+        Task {
+            // Parse reference like "Matthew 11:28" to extract book name, chapter, and verse
+            let components = reference.split(separator: " ")
+            guard components.count >= 2 else { return }
+            
+            // Handle book names with multiple words (e.g., "1 Corinthians", "Song of Solomon")
+            var bookName = ""
+            var chapterVerseString = ""
+            
+            // Find the last component that contains a colon (verse reference)
+            if let lastIndex = components.lastIndex(where: { $0.contains(":") }) {
+                chapterVerseString = String(components[lastIndex])
+                bookName = components[..<lastIndex].joined(separator: " ")
+            } else if let lastIndex = components.lastIndex(where: { $0.allSatisfy { $0.isNumber } }) {
+                // If no colon, the last number is the chapter
+                chapterVerseString = String(components[lastIndex])
+                bookName = components[..<lastIndex].joined(separator: " ")
+            } else {
+                return
+            }
+            
+            // Extract chapter and verse numbers
+            let chapterVerseParts = chapterVerseString.split(separator: ":")
+            guard let chapter = Int(chapterVerseParts.first ?? "") else { return }
+            let verse = chapterVerseParts.count > 1 ? Int(chapterVerseParts[1]) : nil
+            
+            // Fetch books and find the matching book
+            do {
+                let books = try await BibleService.shared.fetchBooks()
+                if let book = books.first(where: { $0.name.lowercased() == bookName.lowercased() }) {
+                    if let verse = verse {
+                        bibleRouter.goToVerse(book: book, chapter: chapter, verse: verse)
+                    } else {
+                        bibleRouter.goToChapter(book: book, chapter: chapter)
+                    }
+                }
+            } catch {
+                // Silent fail - user can manually navigate if this fails
+            }
         }
     }
 }

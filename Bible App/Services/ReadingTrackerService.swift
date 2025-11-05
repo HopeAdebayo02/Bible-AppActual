@@ -50,6 +50,12 @@ final class ReadingTrackerService: ObservableObject {
         }
         objectWillChange.send()
     }
+
+    // MARK: - Reset
+    func reset() {
+        readBookIds = []
+        load()
+    }
 }
 
 

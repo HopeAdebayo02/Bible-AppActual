@@ -12,6 +12,13 @@ struct MainTabsView: View {
     struct BibleDestination: Hashable {
         let book: BibleBook
         let chapter: Int
+        let targetVerse: Int?
+        
+        init(book: BibleBook, chapter: Int, targetVerse: Int? = nil) {
+            self.book = book
+            self.chapter = chapter
+            self.targetVerse = targetVerse
+        }
     }
 
     var body: some View {
@@ -23,7 +30,7 @@ struct MainTabsView: View {
             NavigationStack(path: $bibleNavigationPath) {
                 bibleRoot()
                     .navigationDestination(for: BibleDestination.self) { destination in
-                        VersesView(book: destination.book, chapter: destination.chapter)
+                        VersesView(book: destination.book, chapter: destination.chapter, targetVerse: destination.targetVerse)
                     }
             }
             .tabItem { tabLabel(outline: "book", filled: "book.fill", title: "Bible", index: 1) }
@@ -62,7 +69,18 @@ struct MainTabsView: View {
                 selected = 1
                 DispatchQueue.main.async {
                     bibleNavigationPath = NavigationPath()
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                     let dest = BibleDestination(book: book, chapter: chapter)
+                    bibleNavigationPath.append(dest)
+                }
+            case .goToVerse(let book, let chapter, let verse):
+                selected = 1
+                DispatchQueue.main.async {
+                    bibleNavigationPath = NavigationPath()
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    let dest = BibleDestination(book: book, chapter: chapter, targetVerse: verse)
                     bibleNavigationPath.append(dest)
                 }
             }
