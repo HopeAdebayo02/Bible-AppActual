@@ -1,5 +1,57 @@
 import SwiftUI
 
+// MARK: - ChapterItem enum for organizing verses and headings
+private enum ChapterItem: Identifiable {
+    case heading(text: String, nextVerse: Int)
+    case verse(BibleVerse)
+
+    var id: String {
+        switch self {
+        case .heading(let text, let v): return "h-\(v)-\(text)"
+        case .verse(let v): return "v-\(v.id)"
+        }
+    }
+
+    static func build(from verses: [BibleVerse]) -> [ChapterItem] {
+        var result: [ChapterItem] = []
+        var lastHeading: String? = nil
+
+        // Get book name for header lookup
+        let bookName = verses.first.flatMap { BibleService.shared.getBookName(byId: $0.book_id) } ?? ""
+
+        for v in verses {
+            var headingForThisVerse: String? = v.heading?.trimmingCharacters(in: .whitespacesAndNewlines)
+            var textForThisVerse: String = v.text
+
+            // First priority: Check Header.md for this specific verse
+            if let headerMdHeading = HeaderService.shared.getHeading(forBook: bookName, chapter: v.chapter, verse: v.verse) {
+                headingForThisVerse = headerMdHeading
+            }
+
+            // Fallback: only for BSB, if verse 1 has embedded heading in text, split it
+            if (headingForThisVerse == nil || headingForThisVerse == "") && v.verse == 1 {
+                if v.version.uppercased().contains("BSB") {
+                    let split = BibleService.extractInlineHeading(from: v.text)
+                    if let h = split.heading, !h.isEmpty {
+                        headingForThisVerse = h
+                        textForThisVerse = split.body
+                    }
+                }
+            }
+
+            if let h = headingForThisVerse, h.isEmpty == false {
+                if lastHeading != h {
+                    result.append(.heading(text: h, nextVerse: v.verse))
+                    lastHeading = h
+                }
+            }
+            let vv = BibleVerse(id: v.id, book_id: v.book_id, chapter: v.chapter, verse: v.verse, text: textForThisVerse, version: v.version, heading: headingForThisVerse)
+            result.append(.verse(vv))
+        }
+        return result
+    }
+}
+
 struct SplitStudyViewForCrossReference: View {
     let originalVerse: BibleVerse
     let originalBookName: String

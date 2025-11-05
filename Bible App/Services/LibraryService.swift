@@ -102,4 +102,12 @@ final class LibraryService: ObservableObject {
             .filter { $0.sourceBookId == sourceBookId && $0.sourceChapter == chapter && $0.sourceVerse == verse }
             .sorted { $0.createdAt > $1.createdAt }
     }
+
+    // MARK: - Reset
+    func reset() {
+        bookmarks = []
+        notes = []
+        crossReferences = []
+        load()
+    }
 }

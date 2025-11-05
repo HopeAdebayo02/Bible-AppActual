@@ -97,6 +97,12 @@ final class HighlightService: ObservableObject {
         }
         objectWillChange.send()
     }
+
+    // MARK: - Reset
+    func reset() {
+        highlights = []
+        loadHighlights()
+    }
 }
 
 // MARK: - Color Extension

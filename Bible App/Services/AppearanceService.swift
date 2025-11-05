@@ -16,6 +16,13 @@ final class AppearanceService: ObservableObject {
         UserDefaults.standard.set(isDarkMode, forKey: key)
         objectWillChange.send()
     }
+
+    // MARK: - Reset
+    func reset() {
+        isDarkMode = false
+        UserDefaults.standard.set(isDarkMode, forKey: key)
+        objectWillChange.send()
+    }
 }
 
 

@@ -69,10 +69,6 @@ struct VersesView: View {
                             Image(systemName: multiSelect.contains(v.verse) ? "checkmark.circle.fill" : "circle")
                                 .foregroundColor(multiSelect.contains(v.verse) ? .blue : .secondary)
                                 .onTapGesture { toggleSelect(v.verse) }
-                        } else {
-                            // Show selection indicator for selected verses
-                            Image(systemName: selectedVerses.contains(v.verse) ? "checkmark.circle.fill" : "circle")
-                                .foregroundColor(selectedVerses.contains(v.verse) ? .accentColor : .secondary.opacity(0.3))
                         }
                         Text("\(v.verse)")
                             .font(.caption2)
@@ -109,10 +105,6 @@ struct VersesView: View {
                         Image(systemName: multiSelect.contains(v.verse) ? "checkmark.circle.fill" : "circle")
                             .foregroundColor(multiSelect.contains(v.verse) ? .blue : .secondary)
                             .onTapGesture { toggleSelect(v.verse) }
-                    } else {
-                        // Show selection indicator for selected verses
-                        Image(systemName: selectedVerses.contains(v.verse) ? "checkmark.circle.fill" : "circle")
-                            .foregroundColor(selectedVerses.contains(v.verse) ? .accentColor : .secondary.opacity(0.3))
                     }
                     // Highlighter removed
                     Text("\(v.verse)")
@@ -761,7 +753,7 @@ struct VersesView: View {
 // MARK: - Verse Highlight Modifier
 private struct VerseHighlightModifier: ViewModifier {
     let verse: Int
-    let highlights: HighlightService
+    @ObservedObject var highlights: HighlightService
     let bookId: Int
     let chapter: Int
 

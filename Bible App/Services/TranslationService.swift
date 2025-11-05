@@ -16,6 +16,11 @@ final class TranslationService: ObservableObject {
         let saved = UserDefaults.standard.string(forKey: storageKey)
         self.version = saved ?? "BSB"
     }
+
+    // MARK: - Reset
+    func reset() {
+        version = "BSB"
+    }
 }
 
 
