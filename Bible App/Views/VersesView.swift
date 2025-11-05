@@ -10,15 +10,21 @@ struct VersesView: View {
     @ObservedObject private var library = LibraryService.shared
     @ObservedObject private var translation = TranslationService.shared
     @ObservedObject private var highlights = HighlightService.shared
+    
+    // Temporary highlight for navigation
+    @State private var temporaryHighlightVerse: Int?
+    private let targetVerse: Int?
 
-    init(book: BibleBook, chapter: Int) {
+    init(book: BibleBook, chapter: Int, targetVerse: Int? = nil) {
         self._currentBook = State(initialValue: book)
         self._currentChapter = State(initialValue: chapter)
+        self.targetVerse = targetVerse
     }
 
     @State private var verses: [BibleVerse] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var showError: Bool = false
 
     @State private var showNote: Bool = false
     @State private var noteText: String = ""
@@ -59,8 +65,8 @@ struct VersesView: View {
     
 
     var body: some View {
-        List {
-            if let errorMessage { Text(errorMessage).foregroundColor(.red) }
+        ScrollViewReader { proxy in
+            List {
             // Fallback rendering when items are empty (defensive against empty datasets)
             if items.isEmpty && isLoading == false {
                 ForEach(verses) { v in
@@ -82,6 +88,11 @@ struct VersesView: View {
                     }
                     .listRowSeparator(.hidden)
                     .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 8, trailing: 20))
+                    .listRowBackground(
+                        temporaryHighlightVerse == v.verse ? 
+                        Color.yellow.opacity(0.3) : Color.clear
+                    )
+                    .id("verse-\(v.verse)")
                     .onTapGesture {
                         if multiSelect.isEmpty {
                             // If no verses are selected, select this one and show color picker
@@ -172,6 +183,16 @@ struct VersesView: View {
                 }
                 .listRowInsets(rowInsets(for: item))
                 .listRowSeparator(.hidden)
+                .listRowBackground(
+                    Group {
+                        if case let .verse(v) = item, temporaryHighlightVerse == v.verse {
+                            Color.yellow.opacity(0.3)
+                        } else {
+                            Color.clear
+                        }
+                    }
+                )
+                .id(item.verseId)
                 .background(
                     Group {
                         if item.id == items.first?.id {
@@ -197,6 +218,17 @@ struct VersesView: View {
         }
         .id("list-\(currentBook.id)-\(currentChapter)")
         .coordinateSpace(name: "versesList")
+        .onChangeCompat(items) {
+            // Scroll to target verse when items are loaded
+            if let targetVerse = targetVerse, !items.isEmpty {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        proxy.scrollTo("verse-\(targetVerse)", anchor: .center)
+                    }
+                }
+            }
+        }
+        }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .onReceive(NotificationCenter.default.publisher(for: .audioError).receive(on: DispatchQueue.main)) { notif in
@@ -224,6 +256,17 @@ struct VersesView: View {
             VersesView(book: book, chapter: destination.chapter)
         }
         .task { await setup() }
+        .task {
+            // Trigger temporary highlight if navigating to specific verse
+            if let targetVerse = targetVerse {
+                temporaryHighlightVerse = targetVerse
+                // Clear the highlight after 3 seconds
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                withAnimation(.easeOut(duration: 0.5)) {
+                    temporaryHighlightVerse = nil
+                }
+            }
+        }
         .onAppear {
             // If sanitation resulted in no verses, attempt one fallback refetch
             if verses.isEmpty {
@@ -265,6 +308,8 @@ struct VersesView: View {
             Task { await load() }
         }
         .onChangeCompat(translation.version) {
+            errorMessage = nil
+            showError = false
             Task { await load() }
         }
         // Monitor vertical drag to hide/show chrome while allowing list to scroll normally
@@ -530,6 +575,38 @@ struct VersesView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                 .transition(.move(edge: .bottom))
             }
+            
+            // Error popup overlay
+            if showError, let errorMessage = errorMessage {
+                VStack {
+                    Spacer()
+                    HStack {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.white)
+                            .font(.title3)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Translation Unavailable")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            Text(errorMessage)
+                                .font(.subheadline)
+                                .foregroundColor(.white.opacity(0.9))
+                                .lineLimit(2)
+                        }
+                        Spacer()
+                    }
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.red.opacity(0.95))
+                            .shadow(color: .black.opacity(0.3), radius: 10, y: 5)
+                    )
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 100)
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showError)
+            }
         }
     }
 
@@ -617,6 +694,14 @@ struct VersesView: View {
         } catch {
             errorMessage = error.localizedDescription
             isLoading = false
+            showError = true
+            
+            // Auto-dismiss after 3 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                withAnimation {
+                    showError = false
+                }
+            }
         }
     }
 
@@ -899,14 +984,25 @@ private func presentActivityController(_ av: UIActivityViewController) {
 // (Removed UIKit toast; SwiftUI overlay is used instead)
 
 // MARK: - Chapter display items & helpers
-private enum ChapterItem: Identifiable {
+private enum ChapterItem: Identifiable, Equatable {
     case heading(text: String, nextVerse: Int)
     case verse(BibleVerse)
+    
+    static func == (lhs: ChapterItem, rhs: ChapterItem) -> Bool {
+        lhs.id == rhs.id
+    }
 
     var id: String {
         switch self {
         case .heading(let text, let v): return "h-\(v)-\(text)"
         case .verse(let v): return "v-\(v.id)"
+        }
+    }
+    
+    var verseId: String {
+        switch self {
+        case .heading(let _, let v): return "verse-\(v)"
+        case .verse(let v): return "verse-\(v.verse)"
         }
     }
 
