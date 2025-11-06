@@ -12,7 +12,6 @@ struct CrossReferenceDiscoveryView: View {
     @State private var showAllOutgoing = false
     @State private var showAllIncoming = false
     @State private var selectedReference: CrossReference?
-    @State private var showSplitStudy = false
     
     private var totalReferences: Int {
         outgoingReferences.count + incomingReferences.count
@@ -152,7 +151,6 @@ struct CrossReferenceDiscoveryView: View {
                                                     rank: index + 1,
                                                     onTap: {
                                                         selectedReference = reference
-                                                        showSplitStudy = true
                                                     }
                                                 )
                                                 .transition(.asymmetric(
@@ -213,7 +211,6 @@ struct CrossReferenceDiscoveryView: View {
                                                     rank: index + 1,
                                                     onTap: {
                                                         selectedReference = reference
-                                                        showSplitStudy = true
                                                     }
                                                 )
                                                 .transition(.asymmetric(
@@ -267,15 +264,14 @@ struct CrossReferenceDiscoveryView: View {
                 }
             }
         }
-        .fullScreenCover(isPresented: $showSplitStudy) {
-            if let reference = selectedReference {
-                SplitStudyViewForCrossReference(
-                    originalVerse: verse,
-                    originalBookName: bookName,
-                    crossRef: reference
-                )
-                .environmentObject(bibleRouter)
-            }
+        .fullScreenCover(item: $selectedReference) { reference in
+            SplitStudyViewForCrossReference(
+                originalVerse: verse,
+                originalBookName: bookName,
+                crossRef: reference
+            )
+            .id(reference.id)
+            .environmentObject(bibleRouter)
         }
         .task {
             await loadCrossReferences()
