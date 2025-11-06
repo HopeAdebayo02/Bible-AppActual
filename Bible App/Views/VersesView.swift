@@ -41,6 +41,8 @@ struct VersesView: View {
     @State private var crossRefSource: BibleVerse? = nil
     @State private var pendingCrossRefId: UUID? = nil
     @State private var showCrossRefs: Bool = false
+    @State private var showCrossRefDiscovery: Bool = false
+    @State private var crossRefDiscoveryVerse: BibleVerse?
     @State private var multiSelect: Set<Int> = []
     @State private var lastScrollY: CGFloat = 0
     @State private var items: [ChapterItem] = []
@@ -163,6 +165,13 @@ struct VersesView: View {
                 }
                 .contextMenu {
                     if case let .verse(v) = item {
+                        Button { 
+                            crossRefDiscoveryVerse = v
+                            showCrossRefDiscovery = true
+                        } label: {
+                            Label("View References", systemImage: "arrow.triangle.branch")
+                                .font(.body)
+                        }
                         Button { addBookmark(for: v) } label: {
                             Label("Bookmark", systemImage: "bookmark")
                                 .font(.body)
@@ -176,7 +185,7 @@ struct VersesView: View {
                                 .font(.body)
                         }
                         Button { openCrossReferenceFor(v) } label: {
-                            Label("Cross Reference", systemImage: "link")
+                            Label("Add Cross Reference", systemImage: "link")
                                 .font(.body)
                         }
                         Button { copySingle(v) } label: {
@@ -566,6 +575,13 @@ struct VersesView: View {
         // Present CrossReferencesView after save
         .sheet(isPresented: $showCrossRefs) {
             CrossRefMapModal(focusId: pendingCrossRefId)
+        }
+        // Present CrossReferenceDiscoveryView
+        .sheet(isPresented: $showCrossRefDiscovery) {
+            if let verse = crossRefDiscoveryVerse {
+                CrossReferenceDiscoveryView(verse: verse, bookName: currentBook.name)
+                    .environmentObject(bibleRouter)
+            }
         }
         .overlay {
             if showColorPicker {
