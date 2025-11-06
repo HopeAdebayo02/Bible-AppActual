@@ -6,22 +6,40 @@ struct CrossReferenceDiscoveryView: View {
     
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var bibleRouter: BibleRouter
-    @State private var crossReferences: [CrossReference] = []
+    @State private var outgoingReferences: [CrossReference] = []
+    @State private var incomingReferences: [CrossReference] = []
     @State private var isLoading = true
-    @State private var showAllReferences = false
+    @State private var showAllOutgoing = false
+    @State private var showAllIncoming = false
     @State private var selectedReference: CrossReference?
-    @State private var showPreview = false
+    @State private var showSplitStudy = false
     
-    private var displayedReferences: [CrossReference] {
-        if showAllReferences {
-            return crossReferences
+    private var totalReferences: Int {
+        outgoingReferences.count + incomingReferences.count
+    }
+    
+    private var displayedOutgoing: [CrossReference] {
+        if showAllOutgoing {
+            return outgoingReferences
         } else {
-            return Array(crossReferences.prefix(5))
+            return Array(outgoingReferences.prefix(5))
         }
     }
     
-    private var hasMoreReferences: Bool {
-        crossReferences.count > 5
+    private var displayedIncoming: [CrossReference] {
+        if showAllIncoming {
+            return incomingReferences
+        } else {
+            return Array(incomingReferences.prefix(5))
+        }
+    }
+    
+    private var hasMoreOutgoing: Bool {
+        outgoingReferences.count > 5
+    }
+    
+    private var hasMoreIncoming: Bool {
+        incomingReferences.count > 5
     }
     
     var body: some View {
@@ -74,7 +92,7 @@ struct CrossReferenceDiscoveryView: View {
                                     .font(.caption)
                                     .foregroundColor(.white)
                                 
-                                Text("\(crossReferences.count) \(crossReferences.count == 1 ? "Reference" : "References") Found")
+                                Text("\(totalReferences) \(totalReferences == 1 ? "Reference" : "References") Found")
                                     .font(.subheadline.bold())
                                     .foregroundColor(.white)
                             }
@@ -82,7 +100,7 @@ struct CrossReferenceDiscoveryView: View {
                             .padding(.vertical, 8)
                             .background(
                                 Capsule()
-                                    .fill(crossReferences.isEmpty ? Color.gray : Color.accentColor)
+                                    .fill(totalReferences == 0 ? Color.gray : Color.accentColor)
                             )
                             .transition(.scale.combined(with: .opacity))
                         }
@@ -90,7 +108,7 @@ struct CrossReferenceDiscoveryView: View {
                         if isLoading {
                             ProgressView()
                                 .padding()
-                        } else if crossReferences.isEmpty {
+                        } else if totalReferences == 0 {
                             VStack(spacing: 12) {
                                 Image(systemName: "doc.text.magnifyingglass")
                                     .font(.system(size: 48))
@@ -108,45 +126,129 @@ struct CrossReferenceDiscoveryView: View {
                             }
                             .padding(.vertical, 40)
                         } else {
-                            VStack(spacing: 12) {
-                                ForEach(Array(displayedReferences.enumerated()), id: \.element.toVerse) { index, reference in
-                                    CrossReferenceCard(
-                                        reference: reference,
-                                        rank: index + 1,
-                                        onTap: {
-                                            navigateToReference(reference)
+                            VStack(spacing: 24) {
+                                if !outgoingReferences.isEmpty {
+                                    VStack(alignment: .leading, spacing: 12) {
+                                        HStack {
+                                            Image(systemName: "arrow.right.circle.fill")
+                                                .foregroundColor(.blue)
+                                            Text("This Verse References")
+                                                .font(.headline)
+                                                .foregroundColor(.primary)
+                                            Spacer()
+                                            Text("\(outgoingReferences.count)")
+                                                .font(.caption.bold())
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(Capsule().fill(Color.blue))
                                         }
-                                    )
-                                    .transition(.asymmetric(
-                                        insertion: .scale.combined(with: .opacity),
-                                        removal: .opacity
-                                    ))
+                                        .padding(.horizontal)
+                                        
+                                        VStack(spacing: 12) {
+                                            ForEach(Array(displayedOutgoing.enumerated()), id: \.element.toVerse) { index, reference in
+                                                CrossReferenceCard(
+                                                    reference: reference,
+                                                    rank: index + 1,
+                                                    onTap: {
+                                                        selectedReference = reference
+                                                        showSplitStudy = true
+                                                    }
+                                                )
+                                                .transition(.asymmetric(
+                                                    insertion: .scale.combined(with: .opacity),
+                                                    removal: .opacity
+                                                ))
+                                            }
+                                            
+                                            if hasMoreOutgoing && !showAllOutgoing {
+                                                Button(action: {
+                                                    withAnimation(.spring()) {
+                                                        showAllOutgoing = true
+                                                    }
+                                                }) {
+                                                    HStack {
+                                                        Text("Show \(outgoingReferences.count - 5) More")
+                                                            .font(.subheadline.bold())
+                                                        Image(systemName: "chevron.down")
+                                                            .font(.caption)
+                                                    }
+                                                    .foregroundColor(.blue)
+                                                    .padding(.vertical, 12)
+                                                    .padding(.horizontal, 24)
+                                                    .background(
+                                                        Capsule()
+                                                            .stroke(Color.blue, lineWidth: 2)
+                                                    )
+                                                }
+                                                .padding(.top, 8)
+                                            }
+                                        }
+                                        .padding(.horizontal)
+                                    }
                                 }
                                 
-                                if hasMoreReferences && !showAllReferences {
-                                    Button(action: {
-                                        withAnimation(.spring()) {
-                                            showAllReferences = true
-                                        }
-                                    }) {
+                                if !incomingReferences.isEmpty {
+                                    VStack(alignment: .leading, spacing: 12) {
                                         HStack {
-                                            Text("Show \(crossReferences.count - 5) More")
-                                                .font(.subheadline.bold())
-                                            Image(systemName: "chevron.down")
-                                                .font(.caption)
+                                            Image(systemName: "arrow.left.circle.fill")
+                                                .foregroundColor(.green)
+                                            Text("Verses That Reference This")
+                                                .font(.headline)
+                                                .foregroundColor(.primary)
+                                            Spacer()
+                                            Text("\(incomingReferences.count)")
+                                                .font(.caption.bold())
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(Capsule().fill(Color.green))
                                         }
-                                        .foregroundColor(.accentColor)
-                                        .padding(.vertical, 12)
-                                        .padding(.horizontal, 24)
-                                        .background(
-                                            Capsule()
-                                                .stroke(Color.accentColor, lineWidth: 2)
-                                        )
+                                        .padding(.horizontal)
+                                        
+                                        VStack(spacing: 12) {
+                                            ForEach(Array(displayedIncoming.enumerated()), id: \.element.toVerse) { index, reference in
+                                                CrossReferenceCard(
+                                                    reference: reference,
+                                                    rank: index + 1,
+                                                    onTap: {
+                                                        selectedReference = reference
+                                                        showSplitStudy = true
+                                                    }
+                                                )
+                                                .transition(.asymmetric(
+                                                    insertion: .scale.combined(with: .opacity),
+                                                    removal: .opacity
+                                                ))
+                                            }
+                                            
+                                            if hasMoreIncoming && !showAllIncoming {
+                                                Button(action: {
+                                                    withAnimation(.spring()) {
+                                                        showAllIncoming = true
+                                                    }
+                                                }) {
+                                                    HStack {
+                                                        Text("Show \(incomingReferences.count - 5) More")
+                                                            .font(.subheadline.bold())
+                                                        Image(systemName: "chevron.down")
+                                                            .font(.caption)
+                                                    }
+                                                    .foregroundColor(.green)
+                                                    .padding(.vertical, 12)
+                                                    .padding(.horizontal, 24)
+                                                    .background(
+                                                        Capsule()
+                                                            .stroke(Color.green, lineWidth: 2)
+                                                    )
+                                                }
+                                                .padding(.top, 8)
+                                            }
+                                        }
+                                        .padding(.horizontal)
                                     }
-                                    .padding(.top, 8)
                                 }
                             }
-                            .padding(.horizontal)
                         }
                     }
                     .padding(.bottom, 20)
@@ -165,6 +267,16 @@ struct CrossReferenceDiscoveryView: View {
                 }
             }
         }
+        .fullScreenCover(isPresented: $showSplitStudy) {
+            if let reference = selectedReference {
+                SplitStudyViewForCrossReference(
+                    originalVerse: verse,
+                    originalBookName: bookName,
+                    crossRef: reference
+                )
+                .environmentObject(bibleRouter)
+            }
+        }
         .task {
             await loadCrossReferences()
         }
@@ -175,7 +287,13 @@ struct CrossReferenceDiscoveryView: View {
         
         try? await Task.sleep(nanoseconds: 200_000_000)
         
-        crossReferences = CrossReferenceService.shared.getCrossReferences(
+        outgoingReferences = CrossReferenceService.shared.getCrossReferences(
+            for: bookName,
+            chapter: verse.chapter,
+            verse: verse.verse
+        )
+        
+        incomingReferences = CrossReferenceService.shared.getReferencesToVerse(
             for: bookName,
             chapter: verse.chapter,
             verse: verse.verse
@@ -183,20 +301,6 @@ struct CrossReferenceDiscoveryView: View {
         
         withAnimation(.spring()) {
             isLoading = false
-        }
-    }
-    
-    private func navigateToReference(_ reference: CrossReference) {
-        dismiss()
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            let fullBookName = CrossReferenceService.shared.getFullBookName(from: reference.toBook)
-            
-            bibleRouter.goToVerse(
-                bookName: fullBookName,
-                chapter: reference.toChapter,
-                verse: reference.toVerseNumber
-            )
         }
     }
 }
