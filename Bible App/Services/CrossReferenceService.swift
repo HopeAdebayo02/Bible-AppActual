@@ -1,10 +1,14 @@
 import Foundation
 
 // MARK: - Cross Reference Models
-struct CrossReference {
+struct CrossReference: Identifiable {
     let fromVerse: String
     let toVerse: String
     let votes: Int
+    
+    var id: String {
+        "\(fromVerse)->\(toVerse)"
+    }
     
     var fromBook: String {
         return String(fromVerse.split(separator: ".").first ?? "")
