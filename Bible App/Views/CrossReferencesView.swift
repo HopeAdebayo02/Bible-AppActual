@@ -28,7 +28,13 @@ struct CrossReferencesView: View {
     @GestureState private var dragState: CGSize = .zero
     @State private var isSeeding: Bool = false
     @State private var canvasContentSize: CGSize = .zero
-    // Respect device orientation; no manual rotation
+    @State private var filterScope: FilterScope = .all
+    @State private var densityLimit: Int? = nil
+    @State private var selectedArcId: UUID? = nil
+    
+    enum FilterScope {
+        case all, oldTestament, newTestament
+    }
 
     // Computed property for landscape detection
     private var isCurrentlyLandscape: Bool {
@@ -40,7 +46,62 @@ struct CrossReferencesView: View {
     var body: some View {
         GeometryReader { geometry in
             VStack(spacing: 8) {
-                // Main content area - conditionally show map or table
+                if viewMode == .map {
+                    HStack(spacing: 8) {
+                        Button(action: { filterScope = .all }) {
+                            Text("All")
+                                .font(.caption.weight(.medium))
+                                .foregroundColor(filterScope == .all ? .white : .secondary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(filterScope == .all ? Color.accentColor : Color.secondary.opacity(0.2))
+                                .clipShape(Capsule())
+                        }
+                        
+                        Button(action: { filterScope = .oldTestament }) {
+                            Text("OT")
+                                .font(.caption.weight(.medium))
+                                .foregroundColor(filterScope == .oldTestament ? .white : .secondary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(filterScope == .oldTestament ? Color.accentColor : Color.secondary.opacity(0.2))
+                                .clipShape(Capsule())
+                        }
+                        
+                        Button(action: { filterScope = .newTestament }) {
+                            Text("NT")
+                                .font(.caption.weight(.medium))
+                                .foregroundColor(filterScope == .newTestament ? .white : .secondary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(filterScope == .newTestament ? Color.accentColor : Color.secondary.opacity(0.2))
+                                .clipShape(Capsule())
+                        }
+                        
+                        Spacer()
+                        
+                        Menu {
+                            Button("Show All") { densityLimit = nil }
+                            Button("Top 50") { densityLimit = 50 }
+                            Button("Top 100") { densityLimit = 100 }
+                            Button("Top 200") { densityLimit = 200 }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(densityLimit == nil ? "All" : "Top \(densityLimit!)")
+                                    .font(.caption.weight(.medium))
+                                Image(systemName: "line.3.horizontal.decrease.circle")
+                            }
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.secondary.opacity(0.2))
+                            .clipShape(Capsule())
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
+                }
+                
                 if viewMode == .map {
                 Canvas { context, size in
                     // Performance optimization: only render when needed
@@ -69,11 +130,20 @@ struct CrossReferencesView: View {
                     let inv = CGAffineTransform(translationX: -(offset.width + dragState.width), y: -(offset.height + dragState.height))
                         .scaledBy(x: 1 / max(0.001, scale * pinchState), y: 1 / max(0.001, scale * pinchState))
                     let point = CGPoint(x: location.x, y: location.y).applying(inv)
-                    // Use captured Canvas content size for hit testing
                     let sz = canvasContentSize
                     if let hit = nearestArc(to: point, in: sz) {
-                        // Show connection details first, then navigate
-                        showConnectionDetail(for: hit)
+                        if selectedArcId == hit.id {
+                            showConnectionDetail(for: hit)
+                            selectedArcId = nil
+                        } else {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                selectedArcId = hit.id
+                            }
+                        }
+                    } else {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            selectedArcId = nil
+                        }
                     }
                 }
                 .onLongPressGesture(minimumDuration: 0.4) {
@@ -117,30 +187,40 @@ struct CrossReferencesView: View {
                     }
                 }
                 .overlay(alignment: .bottomTrailing) {
-                    HStack(spacing: 8) {
-                        Button(action: { decreaseZoom() }) {
-                            Image(systemName: "minus.magnifyingglass")
+                    VStack(spacing: 8) {
+                        Button(action: { shareGraph() }) {
+                            Image(systemName: "square.and.arrow.up")
                                 .foregroundColor(.accentColor)
                                 .padding(10)
                         }
                         .background(.ultraThinMaterial)
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        
+                        HStack(spacing: 8) {
+                            Button(action: { decreaseZoom() }) {
+                                Image(systemName: "minus.magnifyingglass")
+                                    .foregroundColor(.accentColor)
+                                    .padding(10)
+                            }
+                            .background(.ultraThinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-                        Button(action: { resetViewTransform() }) {
-                            Image(systemName: "arrow.counterclockwise")
-                                .foregroundColor(.accentColor)
-                                .padding(10)
-                        }
-                        .background(.ultraThinMaterial)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            Button(action: { resetViewTransform() }) {
+                                Image(systemName: "arrow.counterclockwise")
+                                    .foregroundColor(.accentColor)
+                                    .padding(10)
+                            }
+                            .background(.ultraThinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-                        Button(action: { increaseZoom() }) {
-                            Image(systemName: "plus.magnifyingglass")
-                                .foregroundColor(.accentColor)
-                                .padding(10)
+                            Button(action: { increaseZoom() }) {
+                                Image(systemName: "plus.magnifyingglass")
+                                    .foregroundColor(.accentColor)
+                                    .padding(10)
+                            }
+                            .background(.ultraThinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                         }
-                        .background(.ultraThinMaterial)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     }
                     .padding(12)
                 }
@@ -216,23 +296,23 @@ struct CrossReferencesView: View {
         .onChange(of: library.crossReferences.count) { _, _ in
             let existing = Set(arcProgress.keys)
             let newRefs = library.crossReferences
-            // Start animation for newly added arcs with delay for rotation
-            for line in newRefs where existing.contains(line.id) == false {
+            let newArcs = newRefs.filter { existing.contains($0.id) == false }
+            
+            for (index, line) in newArcs.enumerated() {
                 arcProgress[line.id] = 0
                 arcHeadT[line.id] = 0
-                // Delay for 2.5 seconds to allow user to rotate device
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                    // Animate line drawing progressively over 4 seconds
+                let staggerDelay = 2.5 + Double(index) * 0.015
+                
+                DispatchQueue.main.asyncAfter(deadline: .now() + staggerDelay) {
                     withAnimation(.easeInOut(duration: 4.0)) {
                         arcProgress[line.id] = 1
                     }
-                    // Glow head travels along with the line being drawn (slightly ahead)
                     withAnimation(.easeInOut(duration: 4.2)) {
                         arcHeadT[line.id] = 1
                     }
                 }
             }
-            // Prune removed arcs
+            
             let ids = Set(newRefs.map { $0.id })
             for key in existing where ids.contains(key) == false {
                 arcProgress.removeValue(forKey: key)
@@ -370,9 +450,22 @@ struct CrossReferencesView: View {
         let rightX: CGFloat = size.width - 16
         let width = rightX - leftX
 
-        // Draw older arcs first; newly added arcs last so the animation stays on top
-        let ordered = library.crossReferences.sorted { $0.createdAt < $1.createdAt }
-        for line in ordered {
+        var filtered = library.crossReferences
+        
+        switch filterScope {
+        case .oldTestament:
+            filtered = filtered.filter { isOldTestament($0.sourceBookName) && isOldTestament($0.targetBookName) }
+        case .newTestament:
+            filtered = filtered.filter { isNewTestament($0.sourceBookName) && isNewTestament($0.targetBookName) }
+        case .all:
+            break
+        }
+        
+        let ordered = filtered.sorted { $0.createdAt < $1.createdAt }
+        let limited = densityLimit != nil ? Array(ordered.suffix(densityLimit!)) : ordered
+        for line in limited {
+            let isSelected = selectedArcId == line.id
+            let opacity: Double = selectedArcId == nil ? 1.0 : (isSelected ? 1.0 : 0.25)
             let x1 = leftX + width * normalizedX(bookName: line.sourceBookName, chapter: line.sourceChapter)
             let x2 = leftX + width * normalizedX(bookName: line.targetBookName, chapter: line.targetChapter)
             let midX = (x1 + x2) / 2
@@ -383,38 +476,71 @@ struct CrossReferencesView: View {
             path.move(to: CGPoint(x: x1, y: baselineY))
             path.addQuadCurve(to: CGPoint(x: x2, y: baselineY), control: CGPoint(x: midX, y: baselineY - height))
 
-            // Bright, distinct solid color per connection (deterministic by UUID)
-            let baseColor = uniqueColor(for: line.id)
+            let sourceColor = colorForBook(line.sourceBookName)
+            let targetColor = colorForBook(line.targetBookName)
+            
+            let adjustedSourceColor = sourceColor.opacity(opacity)
+            let adjustedTargetColor = targetColor.opacity(opacity)
+            let gradient = Gradient(colors: [adjustedSourceColor, adjustedTargetColor])
+            let gradientShading = GraphicsContext.Shading.linearGradient(
+                gradient,
+                startPoint: CGPoint(x: x1, y: baselineY),
+                endPoint: CGPoint(x: x2, y: baselineY)
+            )
 
             // Animation progress for this arc (1 = fully drawn)
             let progress = arcProgress[line.id] ?? 1
             let trimmed = path.trimmedPath(from: 0, to: max(0, min(progress, 1)))
+            
+            let lineWidth: CGFloat = isSelected ? 2.0 : 1.4
 
-            if progress < 1 {
-                // Prominent glow while animating (line glow in base color)
+            if progress < 1 || isSelected {
+                // Prominent glow while animating (blend source and target colors)
+                let sourceIdx = canonicalIndex(for: line.sourceBookName)
+                let targetIdx = canonicalIndex(for: line.targetBookName)
+                let midHue = (Double(sourceIdx) + Double(targetIdx)) / (2.0 * Double(max(books.count, 1)))
+                let glowOpacity = isSelected ? 0.9 : 0.75
+                let glowRadius: CGFloat = isSelected ? 16 : 12
+                let midColor = Color(hue: midHue, saturation: 0.85, brightness: 0.95, opacity: glowOpacity)
                 context.drawLayer { layer in
-                    layer.addFilter(.shadow(color: baseColor.opacity(0.75), radius: 12, x: 0, y: 0))
-                    layer.stroke(trimmed, with: .color(baseColor), lineWidth: 3.5)
+                    layer.addFilter(.shadow(color: midColor, radius: glowRadius, x: 0, y: 0))
+                    layer.stroke(trimmed, with: .linearGradient(gradientShading), lineWidth: isSelected ? 4.0 : 3.5)
                 }
             }
 
-            // Base stroke (solid, bright)
-            context.stroke(trimmed, with: .color(baseColor), lineWidth: 1.4)
+            context.stroke(trimmed, with: .linearGradient(gradientShading), lineWidth: lineWidth)
 
             // Moving head glow dot along the curve (travels with line as it's being drawn)
             let headT = min(max(arcHeadT[line.id] ?? progress, 0), 1)
-            // Show glow during drawing (when progress < 1) or always in landscape mode
             if headT < 1.0001 && (progress < 0.999 || isCurrentlyLandscape) {
                 let point = quadPoint(t: headT, p0: CGPoint(x: x1, y: baselineY), p1: CGPoint(x: midX, y: baselineY - height), p2: CGPoint(x: x2, y: baselineY))
-                // Larger, more prominent traveling glow
+                let sourceIdx = canonicalIndex(for: line.sourceBookName)
+                let targetIdx = canonicalIndex(for: line.targetBookName)
+                let interpolatedHue = (Double(sourceIdx) * (1 - headT) + Double(targetIdx) * headT) / Double(max(books.count, 1))
+                let headColor = Color(hue: interpolatedHue, saturation: 0.85, brightness: 0.95, opacity: 0.9)
                 let halo = Path(ellipseIn: CGRect(x: point.x - 6, y: point.y - 6, width: 12, height: 12))
                 context.drawLayer { layer in
-                    layer.addFilter(.shadow(color: baseColor.opacity(0.9), radius: 16, x: 0, y: 0))
-                    layer.fill(halo, with: .color(baseColor))
+                    layer.addFilter(.shadow(color: headColor, radius: 16, x: 0, y: 0))
+                    layer.fill(halo, with: .color(headColor))
+                }
+            }
+            
+            if isSelected {
+                let endpointRadius: CGFloat = 4
+                let sourceEndpoint = Path(ellipseIn: CGRect(x: x1 - endpointRadius, y: baselineY - endpointRadius, width: endpointRadius * 2, height: endpointRadius * 2))
+                let targetEndpoint = Path(ellipseIn: CGRect(x: x2 - endpointRadius, y: baselineY - endpointRadius, width: endpointRadius * 2, height: endpointRadius * 2))
+                
+                context.drawLayer { layer in
+                    layer.addFilter(.shadow(color: sourceColor.opacity(0.8), radius: 8, x: 0, y: 0))
+                    layer.fill(sourceEndpoint, with: .color(sourceColor))
+                }
+                
+                context.drawLayer { layer in
+                    layer.addFilter(.shadow(color: targetColor.opacity(0.8), radius: 8, x: 0, y: 0))
+                    layer.fill(targetEndpoint, with: .color(targetColor))
                 }
             }
 
-            // Add invisible hit area for hover detection
             let hitArea = Path(ellipseIn: CGRect(x: midX - 20, y: baselineY - height/2 - 20, width: 40, height: height + 40))
             context.fill(hitArea, with: .color(Color.clear))
         }
@@ -531,7 +657,14 @@ struct CrossReferencesView: View {
         return CGPoint(x: x, y: y)
     }
 
-    // Deterministic bright color per connection id (no gradient)
+    private func colorForBook(_ bookName: String) -> Color {
+        let idx = canonicalIndex(for: bookName)
+        let totalBooks = max(books.count, 1)
+        let hue = Double(idx) / Double(totalBooks)
+        return Color(hue: hue, saturation: 0.85, brightness: 0.95, opacity: 0.95)
+    }
+    
+    // Deterministic bright color per connection id (fallback for non-gradient mode)
     private func uniqueColor(for id: UUID) -> Color {
         // Hash UUID into a stable integer seed
         var hasher = Hasher()
@@ -571,15 +704,22 @@ struct CrossReferencesView: View {
     }
 
     private func canonicalIndex(for bookName: String) -> Int {
-        // Sort by the app's canonical order helper if available; otherwise fallback to index in `books`.
         if let match = books.first(where: { $0.name == bookName }) {
-            // Use the canonical order determined by BibleService via sorting
             let ordered = books.sorted { a, b in
                 BibleService.shared.canonicalOrderIndex(for: a.name) < BibleService.shared.canonicalOrderIndex(for: b.name)
             }
             return ordered.firstIndex(of: match) ?? 0
         }
         return 0
+    }
+    
+    private func isOldTestament(_ bookName: String) -> Bool {
+        let otBooks = ["Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth", "1 Samuel", "2 Samuel", "1 Kings", "2 Kings", "1 Chronicles", "2 Chronicles", "Ezra", "Nehemiah", "Esther", "Job", "Psalm", "Psalms", "Proverbs", "Ecclesiastes", "Song of Solomon", "Isaiah", "Jeremiah", "Lamentations", "Ezekiel", "Daniel", "Hosea", "Joel", "Amos", "Obadiah", "Jonah", "Micah", "Nahum", "Habakkuk", "Zephaniah", "Haggai", "Zechariah", "Malachi"]
+        return otBooks.contains(bookName)
+    }
+    
+    private func isNewTestament(_ bookName: String) -> Bool {
+        return !isOldTestament(bookName)
     }
 
     private func loadBooksIfNeeded() async {
@@ -605,6 +745,51 @@ struct CrossReferencesView: View {
     private func showConnectionDetail(for crossReference: CrossReferenceLine) {
         selectedCrossReference = crossReference
         showConnectionDetail = true
+    }
+    
+    @MainActor
+    private func shareGraph() {
+        let renderer = ImageRenderer(content: 
+            GeometryReader { geometry in
+                Canvas { context, size in
+                    let transform = CGAffineTransform(translationX: offset.width, y: offset.height)
+                        .scaledBy(x: scale, y: scale)
+                    context.concatenate(transform)
+                    let cachedSize = size.applying(transform.inverted())
+                    
+                    if !books.isEmpty {
+                        drawBaseline(in: context, size: cachedSize)
+                        drawArcs(in: context, size: cachedSize)
+                    }
+                }
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                .background(Color.black)
+            }
+            .frame(width: 1200, height: 800)
+        )
+        
+        renderer.scale = 2.0
+        
+        if let image = renderer.uiImage {
+            let activityVC = UIActivityViewController(activityItems: [image], applicationActivities: nil)
+            
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let window = windowScene.windows.first,
+               let rootVC = window.rootViewController {
+                var topVC = rootVC
+                while let presented = topVC.presentedViewController {
+                    topVC = presented
+                }
+                
+                if let popover = activityVC.popoverPresentationController {
+                    popover.sourceView = topVC.view
+                    popover.sourceRect = CGRect(x: topVC.view.bounds.midX, y: topVC.view.bounds.midY, width: 0, height: 0)
+                    popover.permittedArrowDirections = []
+                }
+                
+                topVC.present(activityVC, animated: true)
+            }
+        }
     }
 
     // MARK: - Seed 100 test data (no validation)
