@@ -313,8 +313,6 @@ struct CrossReferenceCard: View {
     let rank: Int
     let onTap: () -> Void
     
-    @State private var isPressed = false
-    
     private var popularityLevel: String {
         if reference.votes > 200 {
             return "🔥 Highly Popular"
@@ -389,23 +387,19 @@ struct CrossReferenceCard: View {
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color(.secondarySystemBackground))
-                    .shadow(color: .black.opacity(isPressed ? 0.1 : 0.05), radius: isPressed ? 2 : 4, x: 0, y: 2)
+                    .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
             )
-            .scaleEffect(isPressed ? 0.98 : 1.0)
+            .contentShape(Rectangle())
         }
-        .buttonStyle(PlainButtonStyle())
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in
-                    withAnimation(.easeInOut(duration: 0.1)) {
-                        isPressed = true
-                    }
-                }
-                .onEnded { _ in
-                    withAnimation(.easeInOut(duration: 0.1)) {
-                        isPressed = false
-                    }
-                }
-        )
+        .buttonStyle(ScaleButtonStyle())
+    }
+}
+
+// Custom button style that scales on press without blocking scroll
+struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
     }
 }
