@@ -2,6 +2,8 @@
 
 This is a SwiftUI Bible app integrated with Supabase for data storage and management.
 
+> **Note:** This is a verification test to confirm repo access and PR workflow.
+
 ## Setup Instructions
 
 ### 1. Install Dependencies
