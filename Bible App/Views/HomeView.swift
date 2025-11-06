@@ -294,9 +294,16 @@ private struct VerseOfTheDayCard: View {
     
     private func navigateToVerse(reference: String) {
         Task {
-            // Parse reference like "Matthew 11:28" to extract book name, chapter, and verse
+            print("📖 Navigating to verse: '\(reference)'")
+            
+            // Parse reference like "Psalm 27:1" to extract book name, chapter, and verse
             let components = reference.split(separator: " ")
-            guard components.count >= 2 else { return }
+            guard components.count >= 2 else { 
+                print("❌ Not enough components in reference")
+                return 
+            }
+            
+            print("📝 Components: \(components)")
             
             // Handle book names with multiple words (e.g., "1 Corinthians", "Song of Solomon")
             var bookName = ""
@@ -311,26 +318,60 @@ private struct VerseOfTheDayCard: View {
                 chapterVerseString = String(components[lastIndex])
                 bookName = components[..<lastIndex].joined(separator: " ")
             } else {
+                print("❌ Could not find chapter:verse pattern")
                 return
             }
             
+            print("📚 Book name: '\(bookName)'")
+            print("🔢 Chapter:Verse string: '\(chapterVerseString)'")
+            
             // Extract chapter and verse numbers
             let chapterVerseParts = chapterVerseString.split(separator: ":")
-            guard let chapter = Int(chapterVerseParts.first ?? "") else { return }
+            guard let chapter = Int(chapterVerseParts.first ?? "") else { 
+                print("❌ Could not parse chapter number")
+                return 
+            }
             let verse = chapterVerseParts.count > 1 ? Int(chapterVerseParts[1]) : nil
+            
+            print("📖 Parsed - Book: '\(bookName)', Chapter: \(chapter), Verse: \(verse ?? 0)")
             
             // Fetch books and find the matching book
             do {
                 let books = try await BibleService.shared.fetchBooks()
+                print("📚 Available books: \(books.map { $0.name })")
+                
+                // Try exact match first
                 if let book = books.first(where: { $0.name.lowercased() == bookName.lowercased() }) {
+                    print("✅ Found exact match: \(book.name)")
                     if let verse = verse {
+                        print("🎯 Navigating to verse: \(book.name) \(chapter):\(verse)")
                         bibleRouter.goToVerse(book: book, chapter: chapter, verse: verse)
                     } else {
+                        print("🎯 Navigating to chapter: \(book.name) \(chapter)")
                         bibleRouter.goToChapter(book: book, chapter: chapter)
                     }
+                    return
                 }
+                
+                // Try partial match (for books like "Psalms" vs "Psalm")
+                if let book = books.first(where: { 
+                    $0.name.lowercased().contains(bookName.lowercased()) || 
+                    bookName.lowercased().contains($0.name.lowercased())
+                }) {
+                    print("✅ Found partial match: \(book.name) for '\(bookName)'")
+                    if let verse = verse {
+                        print("🎯 Navigating to verse: \(book.name) \(chapter):\(verse)")
+                        bibleRouter.goToVerse(book: book, chapter: chapter, verse: verse)
+                    } else {
+                        print("🎯 Navigating to chapter: \(book.name) \(chapter)")
+                        bibleRouter.goToChapter(book: book, chapter: chapter)
+                    }
+                    return
+                }
+                
+                print("❌ No matching book found for '\(bookName)'")
             } catch {
-                // Silent fail - user can manually navigate if this fails
+                print("❌ Error fetching books: \(error)")
             }
         }
     }

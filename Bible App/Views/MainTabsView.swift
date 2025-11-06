@@ -59,13 +59,16 @@ struct MainTabsView: View {
         }
         .onReceive(bibleRouter.$lastCommandId) { _ in
             guard let cmd = bibleRouter.lastCommand else { return }
+            print("🧭 MainTabsView received navigation command: \(cmd)")
             switch cmd {
             case .goToBooksRoot:
+                print("🏠 Going to books root")
                 selected = 1
                 DispatchQueue.main.async {
                     bibleNavigationPath = NavigationPath()
                 }
             case .goToChapter(let book, let chapter):
+                print("📖 Going to chapter: \(book.name) \(chapter)")
                 selected = 1
                 DispatchQueue.main.async {
                     bibleNavigationPath = NavigationPath()
@@ -73,8 +76,10 @@ struct MainTabsView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                     let dest = BibleDestination(book: book, chapter: chapter)
                     bibleNavigationPath.append(dest)
+                    print("✅ Navigation path updated for chapter")
                 }
             case .goToVerse(let book, let chapter, let verse):
+                print("🎯 Going to verse: \(book.name) \(chapter):\(verse)")
                 selected = 1
                 DispatchQueue.main.async {
                     bibleNavigationPath = NavigationPath()
@@ -82,6 +87,7 @@ struct MainTabsView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                     let dest = BibleDestination(book: book, chapter: chapter, targetVerse: verse)
                     bibleNavigationPath.append(dest)
+                    print("✅ Navigation path updated for verse")
                 }
             }
         }

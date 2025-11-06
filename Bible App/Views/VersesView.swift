@@ -19,6 +19,11 @@ struct VersesView: View {
         self._currentBook = State(initialValue: book)
         self._currentChapter = State(initialValue: chapter)
         self.targetVerse = targetVerse
+        if let targetVerse = targetVerse {
+            print("🎯 VersesView initialized with target verse: \(book.name) \(chapter):\(targetVerse)")
+        } else {
+            print("📖 VersesView initialized without target verse: \(book.name) \(chapter)")
+        }
     }
 
     @State private var verses: [BibleVerse] = []
@@ -221,7 +226,9 @@ struct VersesView: View {
         .onChangeCompat(items) {
             // Scroll to target verse when items are loaded
             if let targetVerse = targetVerse, !items.isEmpty {
+                print("📜 VersesView: Items loaded, scrolling to verse \(targetVerse)")
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    print("🎯 VersesView: Attempting to scroll to verse-\(targetVerse)")
                     withAnimation(.easeInOut(duration: 0.5)) {
                         proxy.scrollTo("verse-\(targetVerse)", anchor: .center)
                     }

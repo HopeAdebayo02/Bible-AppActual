@@ -19,14 +19,18 @@ final class BibleRouter: ObservableObject {
 
     @MainActor
     func goToChapter(book: BibleBook, chapter: Int) {
+        print("🚀 BibleRouter.goToChapter: \(book.name) \(chapter)")
         lastCommand = .goToChapter(book: book, chapter: chapter)
         lastCommandId &+= 1
+        print("📡 Command sent, ID: \(lastCommandId)")
     }
     
     @MainActor
     func goToVerse(book: BibleBook, chapter: Int, verse: Int) {
+        print("🚀 BibleRouter.goToVerse: \(book.name) \(chapter):\(verse)")
         lastCommand = .goToVerse(book: book, chapter: chapter, verse: verse)
         lastCommandId &+= 1
+        print("📡 Command sent, ID: \(lastCommandId)")
     }
 }
 
