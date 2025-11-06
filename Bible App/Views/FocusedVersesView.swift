@@ -101,10 +101,15 @@ struct FocusedVersesView: View {
         do {
             let all = try await BibleService.shared.fetchVerses(bookId: bookId, chapter: chapter)
             let set = Set(verses)
-            content = all.filter { set.contains($0.verse) }.sorted { $0.verse < $1.verse }
-            isLoading = false
+            let filtered = all.filter { set.contains($0.verse) }.sorted { $0.verse < $1.verse }
+            await MainActor.run {
+                content = filtered
+                isLoading = false
+            }
         } catch {
-            isLoading = false
+            await MainActor.run {
+                isLoading = false
+            }
         }
     }
 

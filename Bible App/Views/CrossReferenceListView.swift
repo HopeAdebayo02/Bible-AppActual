@@ -77,7 +77,6 @@ struct CrossReferenceListView: View {
                         originalBookName: bookName,
                         crossRef: crossRef
                     )
-                    .presentationDragIndicator(.visible)
                 }
             }
         }

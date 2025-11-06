@@ -114,11 +114,21 @@ private struct SplitPane: View {
     }
 
     private func load() async {
-        do {
+        await MainActor.run {
             isLoading = true
-            verses = try await BibleService.shared.fetchVerses(bookId: book.id, chapter: chapter)
-            isLoading = false
-        } catch { isLoading = false }
+        }
+        
+        do {
+            let fetchedVerses = try await BibleService.shared.fetchVerses(bookId: book.id, chapter: chapter)
+            await MainActor.run {
+                verses = fetchedVerses
+                isLoading = false
+            }
+        } catch {
+            await MainActor.run {
+                isLoading = false
+            }
+        }
     }
 
     private func goNext() {

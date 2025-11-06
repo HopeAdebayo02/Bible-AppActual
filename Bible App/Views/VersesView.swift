@@ -705,24 +705,33 @@ struct VersesView: View {
     }
 
     private func load() async {
-        do {
+        await MainActor.run {
             isLoading = true
-            verses = try await BibleService.shared.fetchVerses(bookId: currentBook.id, chapter: currentChapter)
-            items = ChapterItem.build(from: verses)
-            // Persist last read for HomeView continue button
-            UserDefaults.standard.set(currentBook.id, forKey: "lastBookId")
-            UserDefaults.standard.set(currentBook.name, forKey: "lastBookName")
-            UserDefaults.standard.set(currentChapter, forKey: "lastChapter")
-            isLoading = false
-        } catch {
-            errorMessage = error.localizedDescription
-            isLoading = false
-            showError = true
+        }
+        
+        do {
+            let fetchedVerses = try await BibleService.shared.fetchVerses(bookId: currentBook.id, chapter: currentChapter)
             
-            // Auto-dismiss after 3 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                withAnimation {
-                    showError = false
+            await MainActor.run {
+                verses = fetchedVerses
+                items = ChapterItem.build(from: verses)
+                // Persist last read for HomeView continue button
+                UserDefaults.standard.set(currentBook.id, forKey: "lastBookId")
+                UserDefaults.standard.set(currentBook.name, forKey: "lastBookName")
+                UserDefaults.standard.set(currentChapter, forKey: "lastChapter")
+                isLoading = false
+            }
+        } catch {
+            await MainActor.run {
+                errorMessage = error.localizedDescription
+                isLoading = false
+                showError = true
+                
+                // Auto-dismiss after 3 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    withAnimation {
+                        showError = false
+                    }
                 }
             }
         }

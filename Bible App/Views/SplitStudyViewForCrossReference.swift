@@ -130,96 +130,104 @@ struct SplitStudyViewForCrossReference: View {
         
         return NavigationStack {
             HStack(spacing: 0) {
-            // Left side - Original verse
-            VStack(spacing: 0) {
-                // Left header
-                VStack(spacing: 4) {
-                    HStack {
-                        Text("\(leftBook.name) \(leftChapter)")
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                        Spacer()
-                    }
-                    
-                    HStack {
-                        Button(action: { showLeftTranslationPicker = true }) {
-                            HStack(spacing: 4) {
-                                Text(leftTranslation)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Image(systemName: "chevron.down")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color(.systemBackground))
-                            .cornerRadius(6)
+                // Left side - Original verse
+                VStack(spacing: 0) {
+                    // Left header
+                    VStack(spacing: 4) {
+                        HStack {
+                            Text("\(leftBook.name) \(leftChapter)")
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                            Spacer()
                         }
-                        Spacer()
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color(.systemGray6))
-                
-                // Left content
-                SplitStudyChapterView(
-                    book: leftBook,
-                    chapter: leftChapter,
-                    focusVerse: originalVerse.verse,
-                    translation: leftTranslation
-                )
-            }
-            
-            // Divider
-            Rectangle()
-                .fill(Color(.separator))
-                .frame(width: 1)
-            
-            // Right side - Cross-reference
-            VStack(spacing: 0) {
-                // Right header
-                VStack(spacing: 4) {
-                    HStack {
-                        Text(crossRef.displayText)
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                        Spacer()
-                    }
-                    
-                    HStack {
-                        Button(action: { showRightTranslationPicker = true }) {
-                            HStack(spacing: 4) {
-                                Text(rightTranslation)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Image(systemName: "chevron.down")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
+                        
+                        HStack {
+                            Button(action: { showLeftTranslationPicker = true }) {
+                                HStack(spacing: 4) {
+                                    Text(leftTranslation)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Image(systemName: "chevron.down")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color(.systemBackground))
+                                .cornerRadius(6)
                             }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color(.systemBackground))
-                            .cornerRadius(6)
+                            Spacer()
                         }
-                        Spacer()
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color(.systemGray6))
+                    
+                    // Left content
+                    SplitStudyChapterView(
+                        book: leftBook,
+                        chapter: leftChapter,
+                        focusVerse: originalVerse.verse,
+                        translation: leftTranslation
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(.systemBackground))
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color(.systemGray6))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 
-                // Right content
-                SplitStudyChapterView(
-                    book: rightBook,
-                    chapter: rightChapter,
-                    focusVerse: crossRef.toVerseNumber,
-                    focusEndVerse: crossRef.toVerseEndNumber,
-                    translation: rightTranslation
-                )
+                // Divider
+                Rectangle()
+                    .fill(Color(.separator))
+                    .frame(width: 1)
+                
+                // Right side - Cross-reference
+                VStack(spacing: 0) {
+                    // Right header
+                    VStack(spacing: 4) {
+                        HStack {
+                            Text(crossRef.displayText)
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                            Spacer()
+                        }
+                        
+                        HStack {
+                            Button(action: { showRightTranslationPicker = true }) {
+                                HStack(spacing: 4) {
+                                    Text(rightTranslation)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Image(systemName: "chevron.down")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color(.systemBackground))
+                                .cornerRadius(6)
+                            }
+                            Spacer()
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color(.systemGray6))
+                    
+                    // Right content
+                    SplitStudyChapterView(
+                        book: rightBook,
+                        chapter: rightChapter,
+                        focusVerse: crossRef.toVerseNumber,
+                        focusEndVerse: crossRef.toVerseEndNumber,
+                        translation: rightTranslation
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(.systemBackground))
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(.systemBackground))
             .navigationTitle("Cross Reference Study")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -263,12 +271,11 @@ struct SplitStudyViewForCrossReference: View {
             }
             .onAppear {
                 print("✅ SplitStudyView appeared - forcing render")
-                // Force a layout pass to ensure rendering
-                DispatchQueue.main.async {
-                    print("🔄 Layout pass triggered")
-                }
+                print("📖 Left: \(leftBook.name) \(leftChapter)")
+                print("🔗 Right: \(rightBook.name) \(rightChapter)")
             }
         }
+        .presentationDetents([.large])
     }
 }
 
@@ -283,6 +290,7 @@ struct SplitStudyChapterView: View {
     @State private var isLoading = true
     @State private var items: [ChapterItem] = []
     @State private var errorMessage: String?
+    @State private var viewId = UUID()
     
     init(book: BibleBook, chapter: Int, focusVerse: Int, focusEndVerse: Int? = nil, translation: String = "BSB") {
         self.book = book
@@ -293,36 +301,26 @@ struct SplitStudyChapterView: View {
     }
     
     var body: some View {
-        ScrollViewReader { proxy in
-            List(items, id: \.id) { item in
-                Group {
-                    switch item {
-                    case .heading(let text, _):
-                        Text(text)
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.secondary)
-                            .padding(.vertical, 8)
-                    case .verse(let verse):
-                        verseRow(verse: verse)
-                    }
-                }
-                .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
-            }
-            .listStyle(.plain)
-            .overlay {
-                if isLoading {
-                    VStack {
+        Group {
+            if isLoading {
+                ZStack {
+                    Color(.systemBackground)
+                        .edgesIgnoringSafeArea(.all)
+                    
+                    VStack(spacing: 16) {
                         ProgressView()
+                            .scaleEffect(1.2)
                         Text("Loading \(book.name) \(chapter)...")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(.systemBackground))
-                } else if let error = errorMessage {
+                }
+                .id("loading-\(viewId)")
+            } else if let error = errorMessage {
+                ZStack {
+                    Color(.systemBackground)
+                        .edgesIgnoringSafeArea(.all)
+                    
                     VStack(spacing: 12) {
                         Image(systemName: "exclamationmark.triangle")
                             .font(.largeTitle)
@@ -337,9 +335,13 @@ struct SplitStudyChapterView: View {
                             .foregroundColor(.secondary)
                     }
                     .padding()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(.systemBackground))
-                } else if items.isEmpty {
+                }
+                .id("error-\(viewId)")
+            } else if items.isEmpty {
+                ZStack {
+                    Color(.systemBackground)
+                        .edgesIgnoringSafeArea(.all)
+                    
                     VStack(spacing: 12) {
                         Image(systemName: "book.closed")
                             .font(.largeTitle)
@@ -351,23 +353,56 @@ struct SplitStudyChapterView: View {
                             .foregroundColor(.secondary)
                     }
                     .padding()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(.systemBackground))
                 }
+                .id("empty-\(viewId)")
+            } else {
+                ScrollViewReader { proxy in
+                    List(items, id: \.id) { item in
+                        Group {
+                            switch item {
+                            case .heading(let text, _):
+                                Text(text)
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.secondary)
+                                    .padding(.vertical, 8)
+                            case .verse(let verse):
+                                verseRow(verse: verse)
+                            }
+                        }
+                        .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                    }
+                    .listStyle(.plain)
+                    .background(Color(.systemBackground))
+                    .onAppear {
+                        scrollToFocusVerse(proxy: proxy)
+                    }
+                    .onChange(of: items.count) { oldValue, newValue in
+                        scrollToFocusVerse(proxy: proxy)
+                    }
+                }
+                .id("content-\(items.count)-\(viewId)")
             }
-            .task {
+        }
+        .animation(.default, value: isLoading)
+        .animation(.default, value: items.count)
+        .onAppear {
+            print("✅ SplitStudyChapterView appeared for \(book.name) \(chapter)")
+            print("📊 isLoading: \(isLoading), items: \(items.count), verses: \(verses.count)")
+            
+            // Force immediate load on appear
+            Task { @MainActor in
                 await loadVerses()
             }
-            .onAppear {
-                scrollToFocusVerse(proxy: proxy)
-            }
-            .onChange(of: items.count) { _ in
-                scrollToFocusVerse(proxy: proxy)
-            }
-            .onChange(of: translation) { _, _ in
-                Task {
-                    await loadVerses()
-                }
+        }
+        .task {
+            await loadVerses()
+        }
+        .onChange(of: translation) { oldValue, newValue in
+            Task { @MainActor in
+                await loadVerses()
             }
         }
     }
@@ -397,27 +432,45 @@ struct SplitStudyChapterView: View {
     }
     
     private func loadVerses() async {
-        isLoading = true
-        errorMessage = nil
+        print("🔄 Starting loadVerses for \(book.name) \(chapter)")
         
-        print("Loading verses for \(book.name) (ID: \(book.id)), Chapter: \(chapter), Translation: \(translation)")
-        
-        do {
-            verses = try await BibleService.shared.fetchVerses(bookId: book.id, chapter: chapter, version: translation)
-            print("Loaded \(verses.count) verses for \(book.name) \(chapter) (\(translation))")
-            
-            if verses.isEmpty {
-                errorMessage = "No verses found for \(book.name) chapter \(chapter)"
-            } else {
-                items = ChapterItem.build(from: verses)
-                print("Built \(items.count) chapter items")
-            }
-        } catch {
-            print("Failed to load verses for \(book.name) \(chapter): \(error)")
-            errorMessage = "Failed to load verses: \(error.localizedDescription)"
+        await MainActor.run {
+            isLoading = true
+            errorMessage = nil
+            viewId = UUID() // Force view refresh
         }
         
-        isLoading = false
+        print("📚 Loading verses for \(book.name) (ID: \(book.id)), Chapter: \(chapter), Translation: \(translation)")
+        
+        do {
+            let fetchedVerses = try await BibleService.shared.fetchVerses(bookId: book.id, chapter: chapter, version: translation)
+            print("✅ Loaded \(fetchedVerses.count) verses for \(book.name) \(chapter) (\(translation))")
+            
+            await MainActor.run {
+                verses = fetchedVerses
+                
+                if verses.isEmpty {
+                    errorMessage = "No verses found for \(book.name) chapter \(chapter)"
+                    isLoading = false
+                    viewId = UUID()
+                } else {
+                    items = ChapterItem.build(from: verses)
+                    print("📊 Built \(items.count) chapter items")
+                    isLoading = false
+                    viewId = UUID() // Force view refresh with new content
+                }
+                
+                // Force a render cycle
+                print("🔄 State updated: isLoading=\(isLoading), items=\(items.count)")
+            }
+        } catch {
+            print("❌ Failed to load verses for \(book.name) \(chapter): \(error)")
+            await MainActor.run {
+                errorMessage = "Failed to load verses: \(error.localizedDescription)"
+                isLoading = false
+                viewId = UUID()
+            }
+        }
     }
     
     private func scrollToFocusVerse(proxy: ScrollViewProxy) {

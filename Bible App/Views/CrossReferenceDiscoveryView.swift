@@ -283,24 +283,31 @@ struct CrossReferenceDiscoveryView: View {
     }
     
     private func loadCrossReferences() async {
-        isLoading = true
+        await MainActor.run {
+            isLoading = true
+        }
         
         try? await Task.sleep(nanoseconds: 200_000_000)
         
-        outgoingReferences = CrossReferenceService.shared.getCrossReferences(
+        let outgoing = CrossReferenceService.shared.getCrossReferences(
             for: bookName,
             chapter: verse.chapter,
             verse: verse.verse
         )
         
-        incomingReferences = CrossReferenceService.shared.getReferencesToVerse(
+        let incoming = CrossReferenceService.shared.getReferencesToVerse(
             for: bookName,
             chapter: verse.chapter,
             verse: verse.verse
         )
         
-        withAnimation(.spring()) {
-            isLoading = false
+        await MainActor.run {
+            outgoingReferences = outgoing
+            incomingReferences = incoming
+            
+            withAnimation(.spring()) {
+                isLoading = false
+            }
         }
     }
 }

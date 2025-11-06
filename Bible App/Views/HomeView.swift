@@ -268,25 +268,39 @@ private struct VerseOfTheDayCard: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(votd != nil ? "Verse of the Day: \(votd!.text) — \(votd!.reference)" : "Verse of the Day loading")
         .task {
-            isLoading = true
+            await MainActor.run {
+                isLoading = true
+            }
             let result = await VerseOfTheDayService.shared.getToday()
-            self.votd = result
-            isLoading = false
+            await MainActor.run {
+                self.votd = result
+                isLoading = false
+            }
         }
         .contextMenu {
             Button {
                 Task {
-                    isLoading = true
+                    await MainActor.run {
+                        isLoading = true
+                    }
                     VerseOfTheDayService.shared.restartAtToday()
-                    self.votd = await VerseOfTheDayService.shared.getToday()
-                    isLoading = false
+                    let result = await VerseOfTheDayService.shared.getToday()
+                    await MainActor.run {
+                        self.votd = result
+                        isLoading = false
+                    }
                 }
             } label: { Label("Restart at Day 1 Today", systemImage: "arrow.clockwise") }
             Button {
                 Task {
-                    isLoading = true
-                    self.votd = await VerseOfTheDayService.shared.getToday()
-                    isLoading = false
+                    await MainActor.run {
+                        isLoading = true
+                    }
+                    let result = await VerseOfTheDayService.shared.getToday()
+                    await MainActor.run {
+                        self.votd = result
+                        isLoading = false
+                    }
                 }
             } label: { Label("Refresh Verse", systemImage: "gobackward") }
         }

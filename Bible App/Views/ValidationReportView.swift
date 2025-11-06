@@ -29,9 +29,14 @@ struct ValidationReportView: View {
     }
 
     private func runValidationAllVersions() async {
-        isLoading = true
-        issues = await ValidationService.shared.validateAllVersions()
-        isLoading = false
+        await MainActor.run {
+            isLoading = true
+        }
+        let validationIssues = await ValidationService.shared.validateAllVersions()
+        await MainActor.run {
+            issues = validationIssues
+            isLoading = false
+        }
     }
 }
 

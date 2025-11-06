@@ -71,11 +71,16 @@ struct ReadingTrackerView: View {
 
     private func load() async {
         do {
-            books = try await BibleService.shared.fetchBooks()
-            isLoading = false
+            let fetchedBooks = try await BibleService.shared.fetchBooks()
+            await MainActor.run {
+                books = fetchedBooks
+                isLoading = false
+            }
         } catch {
-            errorMessage = error.localizedDescription
-            isLoading = false
+            await MainActor.run {
+                errorMessage = error.localizedDescription
+                isLoading = false
+            }
         }
     }
 
