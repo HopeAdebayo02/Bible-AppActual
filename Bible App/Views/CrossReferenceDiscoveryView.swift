@@ -151,7 +151,8 @@ struct CrossReferenceDiscoveryView: View {
                                                     rank: index + 1,
                                                     onTap: {
                                                         selectedReference = reference
-                                                    }
+                                                    },
+                                                    showFromVerse: false
                                                 )
                                                 .transition(.asymmetric(
                                                     insertion: .scale.combined(with: .opacity),
@@ -211,7 +212,8 @@ struct CrossReferenceDiscoveryView: View {
                                                     rank: index + 1,
                                                     onTap: {
                                                         selectedReference = reference
-                                                    }
+                                                    },
+                                                    showFromVerse: true
                                                 )
                                                 .transition(.asymmetric(
                                                     insertion: .scale.combined(with: .opacity),
@@ -312,6 +314,7 @@ struct CrossReferenceCard: View {
     let reference: CrossReference
     let rank: Int
     let onTap: () -> Void
+    let showFromVerse: Bool
     
     private var popularityLevel: String {
         if reference.votes > 200 {
@@ -355,7 +358,7 @@ struct CrossReferenceCard: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(reference.displayText)
+                    Text(showFromVerse ? reference.fromDisplayText : reference.displayText)
                         .font(.headline)
                         .foregroundColor(.primary)
                     

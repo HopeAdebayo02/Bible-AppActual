@@ -67,6 +67,11 @@ struct CrossReference: Identifiable {
             return "\(toBook) \(toChapter):\(toVerseNumber)"
         }
     }
+    
+    var fromDisplayText: String {
+        let fullBookName = CrossReferenceService.shared.getFullBookName(from: fromBook)
+        return "\(fullBookName) \(fromChapter):\(fromVerseNumber)"
+    }
 }
 
 // MARK: - Cross Reference Service

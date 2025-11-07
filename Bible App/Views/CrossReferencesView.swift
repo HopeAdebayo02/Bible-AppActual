@@ -504,11 +504,11 @@ struct CrossReferencesView: View {
                 let midColor = Color(hue: midHue, saturation: 0.85, brightness: 0.95, opacity: glowOpacity)
                 context.drawLayer { layer in
                     layer.addFilter(.shadow(color: midColor, radius: glowRadius, x: 0, y: 0))
-                    layer.stroke(trimmed, with: .linearGradient(gradientShading), lineWidth: isSelected ? 4.0 : 3.5)
+                    layer.stroke(trimmed, with: gradientShading, lineWidth: isSelected ? 4.0 : 3.5)
                 }
             }
 
-            context.stroke(trimmed, with: .linearGradient(gradientShading), lineWidth: lineWidth)
+            context.stroke(trimmed, with: gradientShading, lineWidth: lineWidth)
 
             // Moving head glow dot along the curve (travels with line as it's being drawn)
             let headT = min(max(arcHeadT[line.id] ?? progress, 0), 1)
