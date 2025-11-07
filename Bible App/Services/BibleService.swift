@@ -177,24 +177,43 @@ class BibleService {
         )
         if verses.isEmpty {
             let sel = TranslationService.shared.version.uppercased()
+            print("📖 Supabase returned empty verses for \(sel). Attempting API fallback...")
             if sel == "ESV" {
+                print("🔑 Attempting ESV API...")
                 if let esv = try? await fetchVersesFromESV(bookId: bookId, chapter: chapter), esv.isEmpty == false {
+                    print("✅ ESV API succeeded")
                     return esv
                 } else {
+                    print("❌ ESV API failed")
                     throw NSError(domain: "BibleService", code: 1002, userInfo: [
                         NSLocalizedDescriptionKey: "Unable to load ESV verses. The ESV API is currently unavailable or returned no content for this passage."
                     ])
                 }
             } else if sel == "NLT" {
+                print("🔑 Attempting NLT API...")
                 if let nlt = try? await fetchVersesFromNLT(bookId: bookId, chapter: chapter), nlt.isEmpty == false {
+                    print("✅ NLT API succeeded")
                     return nlt
                 } else {
+                    print("❌ NLT API failed")
                     throw NSError(domain: "BibleService", code: 1001, userInfo: [
                         NSLocalizedDescriptionKey: "Unable to load NLT verses. The NLT API is currently unavailable or returned no content for this passage."
                     ])
                 }
+            } else if sel == "KJV" {
+                print("🔑 Attempting KJV API...")
+                if let kjv = try? await fetchVersesFromPublicAPI(bookId: bookId, chapter: chapter, translation: "kjv"), kjv.isEmpty == false {
+                    print("✅ KJV API succeeded")
+                    return kjv
+                } else {
+                    print("❌ KJV API failed")
+                    throw NSError(domain: "BibleService", code: 1003, userInfo: [
+                        NSLocalizedDescriptionKey: "Unable to load KJV verses. The KJV API is currently unavailable or returned no content for this passage."
+                    ])
+                }
             }
             if let fallback = try? await fetchVersesFromPublicAPI(bookId: bookId, chapter: chapter), fallback.isEmpty == false {
+                print("✅ WEB fallback succeeded")
                 return fallback
             }
         }
@@ -246,6 +265,14 @@ class BibleService {
                         NSLocalizedDescriptionKey: "Unable to load NLT verses. The NLT API is currently unavailable or returned no content for this passage."
                     ])
                 }
+            } else if sel == "KJV" {
+                if let kjv = try? await fetchVersesFromPublicAPI(bookId: bookId, chapter: chapter, translation: "kjv"), kjv.isEmpty == false {
+                    return kjv
+                } else {
+                    throw NSError(domain: "BibleService", code: 1003, userInfo: [
+                        NSLocalizedDescriptionKey: "Unable to load KJV verses. The KJV API is currently unavailable or returned no content for this passage."
+                    ])
+                }
             }
             if let fallback = try? await fetchVersesFromPublicAPI(bookId: bookId, chapter: chapter), fallback.isEmpty == false {
                 return fallback.map { BibleVerse(id: $0.id, book_id: $0.book_id, chapter: $0.chapter, verse: $0.verse, text: $0.text, version: version, heading: $0.heading) }
@@ -255,17 +282,17 @@ class BibleService {
     }
 
     // MARK: - Fallback to public API if Supabase has gaps
-    private func fetchVersesFromPublicAPI(bookId: Int, chapter: Int) async throws -> [BibleVerse] {
+    private func fetchVersesFromPublicAPI(bookId: Int, chapter: Int, translation: String = "web") async throws -> [BibleVerse] {
         guard let name = getBookName(byId: bookId) else { return [] }
         let queryName = name.replacingOccurrences(of: " ", with: "+")
-        let urlString = "https://bible-api.com/\(queryName)+\(chapter)?translation=web"
+        let urlString = "https://bible-api.com/\(queryName)+\(chapter)?translation=\(translation.lowercased())"
         guard let url = URL(string: urlString) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         struct APIResp: Codable { struct APIVerse: Codable { let verse: Int; let text: String }
             let verses: [APIVerse]
         }
         let api = try JSONDecoder().decode(APIResp.self, from: data)
-        let version = "WEB"
+        let version = translation.uppercased()
         var out: [BibleVerse] = []
         for (index, v) in api.verses.enumerated() {
             let id = (bookId * 10_000_000) + (chapter * 10_000) + v.verse * 10 + index
@@ -283,7 +310,11 @@ class BibleService {
         ) ?? UserDefaults.standard.string(forKey: "ESV_API_KEY")
         ?? ProcessInfo.processInfo.environment["ESV_API_KEY"]
         ?? BibleService.loadESVKeyFromBundle()
-        guard let key = apiKey, key.isEmpty == false else { return [] }
+        guard let key = apiKey, key.isEmpty == false else {
+            print("❌ ESV API key not found")
+            return []
+        }
+        print("🔑 ESV API key found: \(key.prefix(10))...")
         let ref = "\(name) \(chapter)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         var req = URLRequest(url: URL(string: "https://api.esv.org/v3/passage/text/?q=\(ref)&include-verse-numbers=true&include-passage-references=false&include-headings=false&include-footnotes=false")!)
         req.addValue("Token \(key)", forHTTPHeaderField: "Authorization")
@@ -373,12 +404,15 @@ class BibleService {
     // MARK: - NLT API (api.nlt.to) minimal support
     private func fetchVersesFromNLT(bookId: Int, chapter: Int) async throws -> [BibleVerse] {
         guard let name = getBookName(byId: bookId) else { return [] }
-        // Load key
         let apiKey = (Bundle.main.object(forInfoDictionaryKey: "NLT_API_KEY") as? String)
             ?? UserDefaults.standard.string(forKey: "NLT_API_KEY")
             ?? ProcessInfo.processInfo.environment["NLT_API_KEY"]
             ?? BibleService.loadNLTKeyFromBundle()
-        guard let key = apiKey, key.isEmpty == false else { return [] }
+        guard let key = apiKey, key.isEmpty == false else {
+            print("❌ NLT API key not found")
+            return []
+        }
+        print("🔑 NLT API key found: \(key.prefix(10))...")
 
         // NLT unofficial API expects ref with dot separator and returns HTML-like text
         let ref = ("\(name) \(chapter)")
