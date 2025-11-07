@@ -10,6 +10,9 @@ import SwiftUI
 @main
 struct Bible_AppApp: App {
     init() {
+        // Initialize API keys first
+        APIKeySetup.setupKeys()
+        
         // Initialize Supabase when the app starts
         _ = SupabaseManager.shared
     }
