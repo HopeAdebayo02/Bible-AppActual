@@ -435,8 +435,11 @@ class BibleService {
         guard let url = URL(string: urlStr) else { return [] }
         let (data, _) = try await URLSession.shared.data(from: url)
         guard let html = String(data: data, encoding: .utf8) else { return [] }
-        // Strip basic tags and normalize
-        let stripped = html
+        let strippedHeadings = html
+            .replacingOccurrences(of: "(?is)<h[1-6][^>]*>.*?</h[1-6]>", with: " ", options: .regularExpression)
+            .replacingOccurrences(of: "(?is)<header[^>]*>.*?</header>", with: " ", options: .regularExpression)
+        // Then strip all remaining tags and normalize
+        let stripped = strippedHeadings
             .replacingOccurrences(of: "<[^>]+>", with: " ", options: .regularExpression)
             .replacingOccurrences(of: "&nbsp;", with: " ")
             .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)

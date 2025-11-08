@@ -1049,12 +1049,17 @@ private enum ChapterItem: Identifiable, Equatable {
             var headingForThisVerse: String? = nil
             var textForThisVerse: String = v.text
 
-            // First priority: Check Header.md for this specific verse
-            if let headerMdHeading = HeaderService.shared.getHeading(forBook: bookName, chapter: v.chapter, verse: v.verse) {
-                headingForThisVerse = headerMdHeading
+            // For NLT: ONLY show chapter-level heading (verse 1), skip all section headings
+            if v.version.uppercased().contains("NLT") {
+                if v.verse == 1 {
+                    if let headerMdHeading = HeaderService.shared.getHeading(forBook: bookName, chapter: v.chapter, verse: v.verse) {
+                        headingForThisVerse = headerMdHeading
+                    }
+                }
             } else {
-                // For NLT, skip section headings - only use Header.md
-                if !v.version.uppercased().contains("NLT") {
+                if let headerMdHeading = HeaderService.shared.getHeading(forBook: bookName, chapter: v.chapter, verse: v.verse) {
+                    headingForThisVerse = headerMdHeading
+                } else {
                     headingForThisVerse = v.heading?.trimmingCharacters(in: .whitespacesAndNewlines)
                 }
             }
