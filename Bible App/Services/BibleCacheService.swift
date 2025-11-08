@@ -52,6 +52,14 @@ class BibleCacheService {
         }
     }
     
+    func clearNLTCache() {
+        cacheQueue.async(flags: .barrier) {
+            // Remove all cached NLT chapters
+            self.cache.removeAllObjects()
+            print("🗑️ Cleared NLT cache")
+        }
+    }
+    
     func removeCachedChapter(bookId: Int, chapter: Int, version: String) {
         cacheQueue.async(flags: .barrier) {
             let key = self.cacheKey(bookId: bookId, chapter: chapter, version: version)

@@ -15,6 +15,9 @@ struct Bible_AppApp: App {
         
         // Initialize Supabase when the app starts
         _ = SupabaseManager.shared
+        
+        // Clear NLT cache to remove old data with section headings
+        BibleCacheService.shared.clearNLTCache()
     }
 
     var body: some Scene {

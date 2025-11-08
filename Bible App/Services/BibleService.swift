@@ -150,6 +150,12 @@ class BibleService {
             let cleanedText = BibleService.sanitize(text: v.text)
             let cleanedHeading = v.heading.map { BibleService.sanitize(text: $0) }
             var out = BibleVerse(id: v.id, book_id: v.book_id, chapter: v.chapter, verse: v.verse, text: cleanedText, version: v.version, heading: cleanedHeading)
+            
+            // Remove all section headings from NLT to avoid duplicates with chapter headings
+            if out.version.uppercased().contains("NLT") {
+                out = BibleVerse(id: out.id, book_id: out.book_id, chapter: out.chapter, verse: out.verse, text: out.text, version: out.version, heading: nil)
+            }
+            
             // Heuristic: Some BSB rows embed the heading at the start of verse 1 text.
             if (out.version.uppercased().contains("BSB")) && out.verse == 1 && (out.heading == nil || out.heading?.isEmpty == true) {
                 let split = BibleService.extractInlineHeading(from: out.text)
@@ -235,7 +241,14 @@ class BibleService {
         verses = verses.map { v in
             let cleanedText = BibleService.sanitize(text: v.text)
             let cleanedHeading = v.heading.map { BibleService.sanitize(text: $0) }
-            return BibleVerse(id: v.id, book_id: v.book_id, chapter: v.chapter, verse: v.verse, text: cleanedText, version: v.version, heading: cleanedHeading)
+            var out = BibleVerse(id: v.id, book_id: v.book_id, chapter: v.chapter, verse: v.verse, text: cleanedText, version: v.version, heading: cleanedHeading)
+            
+            // Remove all section headings from NLT to avoid duplicates with chapter headings
+            if out.version.uppercased().contains("NLT") {
+                out = BibleVerse(id: out.id, book_id: out.book_id, chapter: out.chapter, verse: out.verse, text: out.text, version: out.version, heading: nil)
+            }
+            
+            return out
         }
         verses = BibleService.resolveDuplicateVerses(verses)
         verses.sort { (a, b) in

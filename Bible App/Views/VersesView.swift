@@ -1046,12 +1046,17 @@ private enum ChapterItem: Identifiable, Equatable {
         let bookName = verses.first.flatMap { BibleService.shared.getBookName(byId: $0.book_id) } ?? ""
 
         for v in verses {
-            var headingForThisVerse: String? = v.heading?.trimmingCharacters(in: .whitespacesAndNewlines)
+            var headingForThisVerse: String? = nil
             var textForThisVerse: String = v.text
 
             // First priority: Check Header.md for this specific verse
             if let headerMdHeading = HeaderService.shared.getHeading(forBook: bookName, chapter: v.chapter, verse: v.verse) {
                 headingForThisVerse = headerMdHeading
+            } else {
+                // For NLT, skip section headings - only use Header.md
+                if !v.version.uppercased().contains("NLT") {
+                    headingForThisVerse = v.heading?.trimmingCharacters(in: .whitespacesAndNewlines)
+                }
             }
 
             // Fallback: only for BSB, if verse 1 has embedded heading in text, split it
