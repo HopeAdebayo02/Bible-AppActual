@@ -248,6 +248,23 @@ class BibleService {
                 out = BibleVerse(id: out.id, book_id: out.book_id, chapter: out.chapter, verse: out.verse, text: out.text, version: out.version, heading: nil)
             }
             
+            // Extract embedded headings from verse text for NLT and BSB
+            if out.verse == 1 {
+                if out.version.uppercased().contains("NLT") || 
+                   (out.version.uppercased().contains("BSB") && (out.heading == nil || out.heading?.isEmpty == true)) {
+                    let split = BibleService.extractInlineHeading(from: out.text)
+                    if let h = split.heading, !h.isEmpty {
+                        // For NLT, just remove the embedded heading from text (don't use it as display heading)
+                        // For BSB, use the extracted heading as display heading
+                        if !out.version.uppercased().contains("NLT") {
+                            out = BibleVerse(id: out.id, book_id: out.book_id, chapter: out.chapter, verse: out.verse, text: split.body, version: out.version, heading: h)
+                        } else {
+                            out = BibleVerse(id: out.id, book_id: out.book_id, chapter: out.chapter, verse: out.verse, text: split.body, version: out.version, heading: nil)
+                        }
+                    }
+                }
+            }
+            
             return out
         }
         verses = BibleService.resolveDuplicateVerses(verses)

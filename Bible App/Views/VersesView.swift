@@ -1064,12 +1064,18 @@ private enum ChapterItem: Identifiable, Equatable {
                 }
             }
 
-            // Fallback: only for BSB, if verse 1 has embedded heading in text, split it
-            if (headingForThisVerse == nil || headingForThisVerse == "") && v.verse == 1 {
-                if v.version.uppercased().contains("BSB") {
+            // For NLT, always extract embedded headings from text to remove duplicates
+            // For BSB, extract embedded headings only if no other heading exists
+            if v.verse == 1 {
+                if v.version.uppercased().contains("NLT") || 
+                   (v.version.uppercased().contains("BSB") && (headingForThisVerse == nil || headingForThisVerse == "")) {
                     let split = BibleService.extractInlineHeading(from: v.text)
                     if let h = split.heading, !h.isEmpty {
-                        headingForThisVerse = h
+                        // For NLT, just remove the embedded heading from text (don't use it as display heading)
+                        // For BSB, use the extracted heading as display heading
+                        if !v.version.uppercased().contains("NLT") {
+                            headingForThisVerse = h
+                        }
                         textForThisVerse = split.body
                     }
                 }
