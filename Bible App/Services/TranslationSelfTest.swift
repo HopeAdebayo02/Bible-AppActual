@@ -40,7 +40,7 @@ class TranslationSelfTest {
                     let verses = try await BibleService.shared.fetchVerses(
                         bookId: passage.bookId,
                         chapter: passage.chapter,
-                        selectedTranslation: translation
+                        version: translation
                     )
                     
                     let success = !verses.isEmpty

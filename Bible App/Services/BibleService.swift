@@ -348,10 +348,46 @@ class BibleService {
         let ref = "\(name) \(chapter)".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         var req = URLRequest(url: URL(string: "https://api.esv.org/v3/passage/text/?q=\(ref)&include-verse-numbers=true&include-passage-references=false&include-headings=false&include-footnotes=false")!)
         req.addValue("Token \(key)", forHTTPHeaderField: "Authorization")
-        let (data, _) = try await URLSession.shared.data(for: req)
+        let (data, response) = try await URLSession.shared.data(for: req)
+        
+        // Check HTTP response status
+        if let httpResponse = response as? HTTPURLResponse {
+            print("🌐 ESV API response status: \(httpResponse.statusCode)")
+            
+            if httpResponse.statusCode == 429 {
+                print("❌ ESV API rate limit exceeded (HTTP 429)")
+                print("⏰ You have exceeded the API rate limit. Please wait and try again later.")
+                return []
+            } else if httpResponse.statusCode == 401 {
+                print("❌ ESV API unauthorized - invalid API key (HTTP 401)")
+                return []
+            } else if httpResponse.statusCode >= 400 {
+                print("❌ ESV API error - HTTP \(httpResponse.statusCode)")
+                if let errorString = String(data: data, encoding: .utf8) {
+                    print("📄 ESV API error response: \(errorString)")
+                }
+                return []
+            }
+        }
+        
         struct Resp: Codable { let passages: [String] }
-        let r = try JSONDecoder().decode(Resp.self, from: data)
-        guard let text = r.passages.first else { return [] }
+        let text: String
+        do {
+            let r = try JSONDecoder().decode(Resp.self, from: data)
+            guard let passageText = r.passages.first else { 
+                print("❌ ESV API returned empty passages array")
+                return [] 
+            }
+            text = passageText
+            print("✅ ESV API returned \(text.count) characters")
+        } catch {
+            print("❌ ESV API JSON decoding failed: \(error)")
+            if let responseString = String(data: data, encoding: .utf8) {
+                print("📄 ESV API raw response: \(responseString.prefix(200))...")
+            }
+            return []
+        }
+        
         // Normalize unicode punctuation and whitespace
         let normalized = text
             .replacingOccurrences(of: "\u{201C}", with: "\"")
